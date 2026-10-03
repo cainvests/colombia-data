@@ -1,0 +1,46 @@
+name: Actualizar mercados (tasas, divisas y cripto)
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Forzar la actualización de todas las fuentes (true o false)"
+        default: "false"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: datos-mercados
+  cancel-in-progress: false
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Leer fuentes y generar los archivos de datos
+        id: build
+        env:
+          COINGECKO_DEMO_KEY: ${{ secrets.COINGECKO_DEMO_KEY }}
+          FORCE: ${{ github.event.inputs.force }}
+        run: python scripts/build_mercados.py
+        continue-on-error: true
+      - name: Guardar cambios
+        run: |
+          git config user.name "datos-mercados-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A data
+          git diff --cached --quiet || git commit -m "Datos de mercados: actualizacion automatica"
+          git pull --rebase
+          git push
+      - name: Avisar si alguna fuente falló
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "Alguna fuente falló: revisa el registro del paso 'Leer fuentes'."
+          exit 1
