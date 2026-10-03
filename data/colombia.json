@@ -1,1 +1,54 @@
-{ "updated": null, "checked": null, "items": {}, "status": {} }
+{
+  "updated": "2026-10-03T14:48:09Z",
+  "checked": "2026-10-03T14:48:09Z",
+  "items": {
+    "ipc": {
+      "v": 6.24,
+      "p": "2026-08",
+      "pub": "2026-09-07",
+      "src": "DANE",
+      "prev": 5.1,
+      "pl": {
+        "es": "frente a ago 2025",
+        "en": "vs Aug 2025"
+      },
+      "url": "https://www.dane.gov.co/index.php/estadisticas-por-tema/precios-y-costos/indice-de-precios-al-consumidor-ipc/ipc-informacion-tecnica"
+    },
+    "des": {
+      "v": 9.4,
+      "p": "2026-08",
+      "pub": "2026-09-30",
+      "src": "DANE",
+      "prev": 8.6,
+      "pl": {
+        "es": "frente a ago 2025",
+        "en": "vs Aug 2025"
+      },
+      "url": "https://www.dane.gov.co/index.php/estadisticas-por-tema/mercado-laboral/empleo-y-desempleo"
+    },
+    "pib": {
+      "v": 3.5,
+      "p": "2026-T2",
+      "pub": "2026-08-18",
+      "src": "DANE",
+      "note": {
+        "es": "serie original, preliminar",
+        "en": "original series, preliminary"
+      },
+      "url": "https://www.dane.gov.co/index.php/estadisticas-por-tema/cuentas-nacionales/cuentas-nacionales-trimestrales/pib-informacion-tecnica"
+    },
+    "tpm": {
+      "v": 12.25,
+      "src": "Banco de la República",
+      "pub": "2026-09-30",
+      "p": "2026-09",
+      "url": "https://www.banrep.gov.co/es/servicios-temas/2100"
+    }
+  },
+  "status": {
+    "ipc": "ok",
+    "des": "ok",
+    "pib": "ok",
+    "tpm": "ok"
+  }
+}
