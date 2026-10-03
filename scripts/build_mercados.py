@@ -50,7 +50,7 @@ CG_IDS = {
 }
 
 # cada cuánto toca actualizar cada fuente (horas)
-INTERVALS = {"rates": 6, "forex": 6, "crypto": 25 / 60, "crypto_history": 22}
+INTERVALS = {"rates": 6, "forex": 6, "crypto": 25 / 60, "crypto_history": 25 / 60}
 KEEP = 400  # puntos de historial por activo
 
 
@@ -253,26 +253,42 @@ def build_crypto(prev, fetch, now):
     return {"updated": iso(now), "source": "CoinGecko", "missing": missing, "items": items}
 
 
-def build_crypto_history(prev, fetch, now, pause=2.5):
+def build_crypto_history(prev, fetch, now, pause=7.0, batch=8):
+    """Baja el historial de unas pocas monedas por ejecución (las que faltan o son más viejas), para no pasar el
+    límite de CoinGecko. En unas horas quedan las 50 y luego cada moneda se refresca una vez al día."""
     items = dict(prev.get("items", {}))
-    partial = False
-    for sym, cid in CG_IDS.items():
+    fetched = dict(prev.get("fetched", {}))
+
+    def viejo(sym):
+        t = parse_iso(fetched.get(sym, ""))
+        return t is None or (now - t).total_seconds() > 20 * 3600
+
+    todo = [s for s in sorted(CG_IDS, key=lambda x: fetched.get(x, "")) if viejo(s) or s not in items][:batch]
+    if not todo:
+        return prev
+    errors, nuevos = [], 0
+    for sym in todo:
         try:
-            js = json.loads(fetch(CG_HIST.format(id=cid), cg_headers()))
-            rows = parse_market_chart(js)
-            if rows:
+            rows = parse_market_chart(json.loads(fetch(CG_HIST.format(id=CG_IDS[sym]), cg_headers())))
+            if not rows:
+                errors.append(f"{sym}: sin datos")
+            else:
                 items[sym] = merge_hist(items.get(sym), rows, 370)
+                fetched[sym] = iso(now)
+                nuevos += 1
         except urllib.error.HTTPError as e:
-            if e.code == 429:
-                partial = True
-                break
-        except Exception:  # noqa: BLE001
-            partial = True
+            errors.append(f"{sym}: HTTP {e.code}")
+            if e.code in (401, 403, 429):
+                break  # límite o clave requerida: no insistir en esta ejecución
+        except Exception as e:  # noqa: BLE001
+            errors.append(f"{sym}: {type(e).__name__}")
         if pause:
             time.sleep(pause)
-    if len(items) < 25:
-        raise ValueError(f"historial insuficiente ({len(items)} monedas)")
-    return {"updated": iso(now), "source": "CoinGecko", "partial": partial, "items": items}
+    if nuevos == 0:
+        raise ValueError("no se pudo bajar ningún historial (" + "; ".join(errors[:3]) + ")")
+    pending = [s for s in CG_IDS if s not in items]
+    return {"updated": iso(now), "source": "CoinGecko", "partial": bool(pending), "pending": pending,
+            "fetched": fetched, "items": items}
 
 
 # ---------------------------------------------------------------- orquestación
@@ -291,7 +307,7 @@ def due(status, name, now, force):
     return last is None or (now - last).total_seconds() >= INTERVALS[name] * 3600 - 60
 
 
-def run(now=None, fetch=get, data_dir=DATA, force=False, only=None, pause=2.5):
+def run(now=None, fetch=get, data_dir=DATA, force=False, only=None, pause=7.0, batch=8):
     now = now or now_utc()
     spath = os.path.join(data_dir, "mercados-status.json")
     status = read_json(spath, {"attempts": {}, "results": {}})
@@ -308,7 +324,7 @@ def run(now=None, fetch=get, data_dir=DATA, force=False, only=None, pause=2.5):
         path = os.path.join(data_dir, fname)
         prev = read_json(path, {})
         try:
-            kwargs = {"pause": pause} if name == "crypto_history" else {}
+            kwargs = {"pause": pause, "batch": batch} if name == "crypto_history" else {}
             out = builder(prev, fetch, now, **kwargs)
             write_json(path, out)
             status["results"][name] = "ok"
