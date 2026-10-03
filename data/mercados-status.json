@@ -1,1 +1,1 @@
-{"attempts":{"rates":"2026-10-03T15:29:12Z","forex":"2026-10-03T15:29:12Z","crypto":"2026-10-03T15:29:12Z","crypto_history":"2026-10-03T15:29:12Z"},"results":{"rates":"ok","forex":"ok","crypto":"ok","crypto_history":"error: ValueError: historial insuficiente (5 monedas)"},"checked":"2026-10-03T15:29:12Z"}
+{"attempts":{"rates":"2026-10-03T15:37:31Z","forex":"2026-10-03T15:37:31Z","crypto":"2026-10-03T15:37:31Z","crypto_history":"2026-10-03T15:37:31Z"},"results":{"rates":"ok","forex":"ok","crypto":"ok","crypto_history":"ok"},"checked":"2026-10-03T15:37:31Z"}
