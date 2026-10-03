@@ -76,6 +76,7 @@ class Flujo(unittest.TestCase):
         raise AssertionError(url)
     def run_(self, fetch=None, now=NOW, force=True, **kw):
         self.d = getattr(self, "d", None) or tempfile.mkdtemp()
+        kw.setdefault("batch", 50)
         return m.run(now=now, fetch=fetch or self.fetch_ok, data_dir=self.d, force=force, pause=0, **kw)
     def read(self, f): return json.load(open(os.path.join(self.d, f), encoding="utf-8"))
     def test_todo_bien(self):
@@ -113,17 +114,48 @@ class Flujo(unittest.TestCase):
         self.run_(fetch=espia, now=NOW + datetime.timedelta(minutes=30), force=False)
         self.assertTrue(any("coins/markets" in u for u in calls))         # cripto sí (cada 25 min)
         self.assertFalse(any("treasury.gov" in u for u in calls))         # tasas no (cada 6 h)
-    def test_limite_de_coingecko_en_historial(self):
-        self.run_()
-        n = {"i": 0}
+    def test_historial_se_completa_por_tandas(self):
+        d = tempfile.mkdtemp(); self.d = d
+        t = NOW
+        for k in range(8):                                                # 8 ejecuciones de 8 monedas = 64 >= 50
+            m.run(now=t, fetch=self.fetch_ok, data_dir=d, force=True, only=["crypto_history"], pause=0, batch=8)
+            n = len(self.read("crypto-history.json")["items"])
+            if k == 0: self.assertEqual(n, 8)                             # la primera tanda baja solo 8
+            t += datetime.timedelta(minutes=30)
+        h = self.read("crypto-history.json")
+        self.assertEqual(len(h["items"]), 50); self.assertFalse(h["partial"]); self.assertEqual(h["pending"], [])
+    def test_historial_no_repite_lo_fresco(self):
+        self.run_(only=["crypto_history"])
+        calls = []
+        def espia(url, headers=None):
+            calls.append(url); return self.fetch_ok(url, headers)
+        self.run_(fetch=espia, only=["crypto_history"], now=NOW + datetime.timedelta(hours=2))
+        self.assertEqual(calls, [])                                       # todo está fresco: no hace ninguna consulta
+        self.run_(fetch=espia, only=["crypto_history"], now=NOW + datetime.timedelta(hours=21))
+        self.assertEqual(len(calls), 50)                                  # pasadas 20 h, se refresca
+    def test_limite_a_mitad_conserva_lo_bajado(self):
+        d = tempfile.mkdtemp(); self.d = d; n = {"i": 0}
         def limite(url, headers=None):
             if "market_chart" in url:
                 n["i"] += 1
                 if n["i"] > 3: raise urllib.error.HTTPError(url, 429, "too many", {}, None)
             return self.fetch_ok(url, headers)
-        st, failed = self.run_(fetch=limite, only=["crypto_history"], now=NOW + datetime.timedelta(days=1))
-        self.assertEqual(failed, [])
-        h = self.read("crypto-history.json"); self.assertTrue(h["partial"]); self.assertGreaterEqual(len(h["items"]), 25)
+        st, failed = m.run(now=NOW, fetch=limite, data_dir=d, force=True, only=["crypto_history"], pause=0, batch=8)
+        self.assertEqual(failed, [])                                      # lo bajado se guarda y no hay alarma
+        h = self.read("crypto-history.json"); self.assertEqual(len(h["items"]), 3); self.assertTrue(h["partial"])
+    def test_limite_desde_la_primera_es_error_con_motivo(self):
+        def siempre429(url, headers=None):
+            if "market_chart" in url: raise urllib.error.HTTPError(url, 429, "too many", {}, None)
+            return self.fetch_ok(url, headers)
+        st, failed = self.run_(fetch=siempre429, only=["crypto_history"])
+        self.assertEqual(failed, ["crypto_history"])
+        self.assertIn("HTTP 429", st["results"]["crypto_history"])        # el motivo exacto queda a la vista
+    def test_clave_requerida_se_nota(self):
+        def sin_clave(url, headers=None):
+            if "market_chart" in url: raise urllib.error.HTTPError(url, 401, "no key", {}, None)
+            return self.fetch_ok(url, headers)
+        st, failed = self.run_(fetch=sin_clave, only=["crypto_history"])
+        self.assertIn("HTTP 401", st["results"]["crypto_history"])
     def test_pocas_monedas_es_error(self):
         def pocas(url, headers=None):
             return json.dumps(MKT) if "coins/markets" in url else self.fetch_ok(url, headers)
