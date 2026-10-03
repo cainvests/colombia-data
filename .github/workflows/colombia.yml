@@ -1,0 +1,34 @@
+name: Actualizar datos de Colombia
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  actualizar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Leer fuentes oficiales y generar data/colombia.json
+        id: build
+        run: python scripts/build_colombia.py
+        continue-on-error: true
+      - name: Guardar cambios
+        run: |
+          git config user.name "datos-colombia-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/colombia.json
+          git diff --cached --quiet || git commit -m "Datos de Colombia: actualizacion automatica"
+          git push
+      - name: Avisar si alguna fuente falló
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "Alguna fuente falló: revisa el registro del paso anterior."
+          exit 1
