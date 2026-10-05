@@ -16,7 +16,7 @@ Reglas:
   - Una clave de CoinGecko es opcional y se guarda como secreto de GitHub (COINGECKO_DEMO_KEY). Nunca va en el código.
 """
 import json, os, sys, time, datetime
-import urllib.request, urllib.error
+import re, urllib.request, urllib.error, urllib.parse, urllib.robotparser
 import xml.etree.ElementTree as ET
 
 UA = "CAInvestsDataBot/1.0 (+https://cainvests.com; hola@cainvests.com)"
@@ -49,8 +49,13 @@ CG_IDS = {
     "LDO": "lido-dao", "STX": "blockstack", "PEPE": "pepe", "WIF": "dogwifcoin", "BONK": "bonk", "FET": "fetch-ai",
 }
 
+# Banco de la República · servicio oficial SDMX (Serankua). Aquí solo se LISTA el catálogo de series disponibles.
+BANREP_CATALOGO = ["https://totoro.banrep.gov.co/nsi-jax-ws/rest/dataflow/ESTAT/all/latest",
+                   "https://totoro.banrep.gov.co/nsi-jax-ws/rest/dataflow/all/all/latest"]
+CLAVES_TES = re.compile(r"(\bTES\b|cero\s*cup|zero.?coupon|t[ií]tulos de tesorer|deuda p[uú]blica|pol[ií]tica monetaria|\bTPM\b|\bIPC\b|inflaci|\bIBR\b|\bDTF\b|\bUVR\b)", re.I)
+
 # cada cuánto toca actualizar cada fuente (horas)
-INTERVALS = {"rates": 6, "forex": 6, "crypto": 25 / 60, "crypto_history": 25 / 60}
+INTERVALS = {"rates": 6, "forex": 6, "crypto": 25 / 60, "crypto_history": 25 / 60, "banrep_catalogo": 24}
 KEEP = 400  # puntos de historial por activo
 
 
@@ -291,12 +296,58 @@ def build_crypto_history(prev, fetch, now, pause=7.0, batch=8):
             "fetched": fetched, "items": items}
 
 
+# ---------------------------------------------------------------- Banco de la República: catálogo SDMX
+def robots_ok(url):
+    p = urllib.parse.urlparse(url)
+    rp = urllib.robotparser.RobotFileParser()
+    rp.set_url(f"{p.scheme}://{p.netloc}/robots.txt")
+    rp.read()  # 404 = sin restricciones; 401/403 = prohibido; error de red = excepción
+    return rp.can_fetch(UA, url)
+
+
+def parse_dataflows(xml_text):
+    """Devuelve [{id, agency, version, es, en}] a partir de la respuesta SDMX-ML de /dataflow."""
+    root = ET.fromstring(xml_text)
+    out = []
+    for el in root.iter():
+        if local(el.tag) != "Dataflow":
+            continue
+        names = {}
+        for c in el:
+            if local(c.tag) == "Name":
+                names[c.attrib.get("{http://www.w3.org/XML/1998/namespace}lang", "")] = (c.text or "").strip()
+        out.append({"id": el.attrib.get("id", ""), "agency": el.attrib.get("agencyID", ""), "version": el.attrib.get("version", ""),
+                    "es": names.get("es", ""), "en": names.get("en", "") or (next(iter(names.values())) if names else "")})
+    return [f for f in out if f["id"]]
+
+
+def build_banrep_catalogo(prev, fetch, now, robots=robots_ok):
+    last_err = None
+    for url in BANREP_CATALOGO:
+        try:
+            if not robots(url):
+                raise PermissionError("robots.txt no permite el acceso automático")
+            flows = parse_dataflows(fetch(url))
+            if flows:
+                break
+        except Exception as e:  # noqa: BLE001
+            last_err = e
+    else:
+        raise ValueError(f"no se pudo leer el catálogo del Banco de la República ({type(last_err).__name__ if last_err else 'vacío'}: {last_err})")
+    for f in flows:
+        f["match"] = bool(CLAVES_TES.search(f["es"] + " " + f["en"] + " " + f["id"]))
+    flows.sort(key=lambda f: (not f["match"], f["id"]))
+    return {"updated": iso(now), "source": "Banco de la República · SDMX (Serankua)", "count": len(flows),
+            "matches": [f["id"] for f in flows if f["match"]], "flows": flows[:600]}
+
+
 # ---------------------------------------------------------------- orquestación
 SOURCES = {
     "rates": ("rates.json", build_rates),
     "forex": ("forex.json", build_forex),
     "crypto": ("crypto.json", build_crypto),
     "crypto_history": ("crypto-history.json", build_crypto_history),
+    "banrep_catalogo": ("banrep-catalogo.json", build_banrep_catalogo),
 }
 
 
