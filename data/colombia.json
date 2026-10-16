@@ -1,6 +1,6 @@
 {
   "updated": "2026-10-07T23:08:38Z",
-  "checked": "2026-10-16T04:37:39Z",
+  "checked": "2026-10-16T11:30:26Z",
   "items": {
     "ipc": {
       "v": 6.29,
@@ -46,9 +46,9 @@
     }
   },
   "status": {
-    "ipc": "ok",
-    "des": "ok",
-    "pib": "ok",
+    "ipc": "error: PermissionError: robots.txt no permite el acceso automático",
+    "des": "error: PermissionError: robots.txt no permite el acceso automático",
+    "pib": "error: PermissionError: robots.txt no permite el acceso automático",
     "tpm": "ok"
   }
 }
