@@ -1,6 +1,6 @@
 {
-  "updated": "2026-10-07T23:08:38Z",
-  "checked": "2026-10-30T13:02:03Z",
+  "updated": "2026-10-30T22:25:34Z",
+  "checked": "2026-10-30T22:25:34Z",
   "items": {
     "ipc": {
       "v": 6.29,
@@ -15,14 +15,14 @@
       "url": "https://www.dane.gov.co/index.php/estadisticas-por-tema/precios-y-costos/indice-de-precios-al-consumidor-ipc/ipc-informacion-tecnica"
     },
     "des": {
-      "v": 9.4,
-      "p": "2026-08",
-      "pub": "2026-09-30",
+      "v": 8.0,
+      "p": "2026-09",
+      "pub": "2026-10-30",
       "src": "DANE",
-      "prev": 8.6,
+      "prev": 8.2,
       "pl": {
-        "es": "frente a ago 2025",
-        "en": "vs Aug 2025"
+        "es": "frente a sep 2025",
+        "en": "vs Sep 2025"
       },
       "url": "https://www.dane.gov.co/index.php/estadisticas-por-tema/mercado-laboral/empleo-y-desempleo"
     },
@@ -40,8 +40,8 @@
     "tpm": {
       "v": 12.25,
       "src": "Banco de la República",
-      "pub": "2026-09-30",
-      "p": "2026-09",
+      "pub": "2026-10-30",
+      "p": "2026-10",
       "url": "https://www.banrep.gov.co/es/servicios-temas/2100"
     }
   },
