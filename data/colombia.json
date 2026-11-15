@@ -1,6 +1,6 @@
 {
   "updated": "2026-11-05T06:54:54Z",
-  "checked": "2026-11-14T22:29:42Z",
+  "checked": "2026-11-15T06:40:43Z",
   "items": {
     "ipc": {
       "v": 6.29,
@@ -49,6 +49,6 @@
     "ipc": "error: ValueError: no encontré la inflación anual",
     "des": "ok",
     "pib": "ok",
-    "tpm": "error: TimeoutError: The read operation timed out"
+    "tpm": "ok"
   }
 }
