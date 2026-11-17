@@ -1,6 +1,6 @@
 {
-  "updated": "2026-11-05T06:54:54Z",
-  "checked": "2026-11-17T07:59:47Z",
+  "updated": "2026-11-17T20:59:46Z",
+  "checked": "2026-11-17T20:59:46Z",
   "items": {
     "ipc": {
       "v": 6.29,
@@ -27,9 +27,9 @@
       "url": "https://www.dane.gov.co/index.php/estadisticas-por-tema/mercado-laboral/empleo-y-desempleo"
     },
     "pib": {
-      "v": 3.5,
-      "p": "2026-T2",
-      "pub": "2026-08-18",
+      "v": 0.5,
+      "p": "2026-T3",
+      "pub": "2026-11-17",
       "src": "DANE",
       "note": {
         "es": "serie original, preliminar",
